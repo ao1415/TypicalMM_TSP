@@ -231,6 +231,18 @@ private:
 		return pro > random();
 	}
 
+	const double score(const vector<Point>& points) const {
+
+		double r = 0;
+		int size = static_cast<int>(points.size());
+
+		for (int i = 0; i < size - 1; i++)
+			r += range(points[i], points[i + 1]);
+		r += range(points[0], points[size - 1]);
+
+		return r;
+	}
+
 public:
 
 	Annealing() {
@@ -255,20 +267,26 @@ public:
 		while (!timer)
 		{
 			const auto diff = timer.diff();
-			const int index = randBetween(mt);
 
-			const int p0 = index;
-			const int p1 = (index + 1) % size;
-			const int p2 = (index + 2) % size;
-			const int p3 = (index + 3) % size;
-
-			const double baseRange = range(field[p0], field[p1]) + range(field[p1], field[p2]) + range(field[p2], field[p3]);
-			const double deffRange = range(field[p0], field[p2]) + range(field[p2], field[p1]) + range(field[p1], field[p3]);
-
-			if (probability(baseRange, deffRange, diff))
+			for (int i = 0; i < 100; i++)
 			{
-				swap(field[p1], field[p2]);
-				best = field;
+				const int index = randBetween(mt);
+
+				const int p0 = index;
+				const int p1 = (index + 1) % size;
+				const int p2 = (index + 2) % size;
+				const int p3 = (index + 3) % size;
+
+				const double baseRange = range(field[p0], field[p1]) + range(field[p1], field[p2]) + range(field[p2], field[p3]);
+				const double deffRange = range(field[p0], field[p2]) + range(field[p2], field[p1]) + range(field[p1], field[p3]);
+
+				if (probability(baseRange, deffRange, diff))
+				{
+					swap(field[p1], field[p2]);
+
+					if (score(best) > score(field))
+						best = field;
+				}
 			}
 		}
 
