@@ -220,7 +220,7 @@ public:
 class Annealing {
 private:
 
-	const int T = 10000;
+	const int T = 100000;
 
 	bool probability(const double& base, const double& next, const long long& t) const {
 
@@ -243,6 +243,19 @@ private:
 		return r;
 	}
 
+	void change(const int index, const int width, vector<int>& field) {
+
+		const int size = static_cast<int>(field.size());
+
+		for (int i = 0; i < width / 2; i++)
+		{
+			int p1 = (index + (i + 1)) % size;
+			int p2 = (index + (width - 1) - (i + 1)) % size;
+
+			swap(field[p1], field[p2]);
+		}
+	}
+
 public:
 
 	Annealing() {
@@ -263,7 +276,8 @@ public:
 		random_device rnd;
 		mt19937 mt(rnd());
 
-		uniform_int_distribution<> randBetween(0, size - 1);
+		uniform_int_distribution<> randIndex(0, size - 1);
+		bernoulli_distribution randWidth(1.0 / 3.0);
 
 		Timer timer(chrono::milliseconds(this->T));
 
@@ -279,37 +293,39 @@ public:
 
 			for (int i = 0; i < 100; i++)
 			{
-				const int index = randBetween(mt);
+				const int index = randIndex(mt);
+
+				int width = 4;
+
+				for (int i = 0; i < 40; i++)
+				{
+					if (mt() % 16 == 0) break;
+					width++;
+				}
+
 				count++;
 
 				const int p0 = index;
 				const int p1 = (index + 1) % size;
-				const int p2 = (index + 2) % size;
-				const int p3 = (index + 3) % size;
+				const int p2 = (index + width - 2) % size;
+				const int p3 = (index + width - 1) % size;
 
 				const double baseRange = range(points[field[p0]], points[field[p1]]) + range(points[field[p2]], points[field[p3]]);
 				const double deffRange = range(points[field[p0]], points[field[p2]]) + range(points[field[p1]], points[field[p3]]);
 
 				if (probability(baseRange, deffRange, diff))
 				{
-					swap(field[p1], field[p2]);
+					change(p0, width, field);
 
 					score -= baseRange - deffRange;
 
-					if (bestScore > score && baseRange < deffRange)
+					if (bestScore > score)
 					{
 						best = field;
-						swap(best[p1], best[p2]);
-						bestScore = score += baseRange - deffRange;
+						bestScore = score;
 					}
 				}
 			}
-		}
-
-		if (bestScore > score)
-		{
-			best = field;
-			bestScore = score;
 		}
 
 		cerr << count << endl;
