@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include <vector>
+#include <array>
 
 using namespace std;
 
@@ -157,6 +158,18 @@ const double inline range(const Point& p1, const Point& p2) {
 	return dx * dx + dy * dy;
 }
 
+struct XorShift {
+	unsigned int x;
+	XorShift() : x(2463534242U) {}
+	unsigned int rand() {
+		x ^= (x << 13);
+		x ^= (x >> 17);
+		x ^= (x << 5);
+		return x;
+	}
+
+};
+
 const double inline random() {
 
 	static random_device rnd;
@@ -170,71 +183,31 @@ const double inline random() {
 class Mountain {
 private:
 
+	/// <summary>
+	/// é¿çséûä‘(ms)
+	/// </summary>
+	const int T = 10000;
 
+	const double TempStart = 10000.0;
+	const double TempEnd = 1.0;
+	const double Time = T;
+	const double TempDiff = (TempStart - TempEnd) / Time;
 
-public:
+	XorShift random;
+	int size;
 
-	Mountain() {
+	bool probability(const double& base, const double& next, const long long& t) {
 
+		const double diff = base - next;
+
+		if (diff > 0) return true;
+
+		return false;
 	}
 
-	vector<Point> think(const vector<Point>& points) {
-
-		vector<Point> field = points;
-		vector<Point> best = field;
-
-		const int size = static_cast<int>(points.size());
-
-		random_device rnd;
-		mt19937 mt(rnd());
-
-		uniform_int_distribution<> randBetween(0, size - 1);
-
-		Timer timer(10000ms);
-
-		timer.start();
-		while (!timer)
-		{
-			const int index = randBetween(mt);
-
-			const int p0 = index;
-			const int p1 = (index + 1) % size;
-			const int p2 = (index + 2) % size;
-			const int p3 = (index + 3) % size;
-
-			const double baseRange = range(field[p0], field[p1]) + range(field[p1], field[p2]) + range(field[p2], field[p3]);
-			const double deffRange = range(field[p0], field[p2]) + range(field[p2], field[p1]) + range(field[p1], field[p3]);
-
-			if (baseRange > deffRange)
-			{
-				swap(field[p1], field[p2]);
-				best = field;
-			}
-		}
-
-		return best;
-	}
-
-};
-
-class Annealing {
-private:
-
-	const int T = 100000;
-
-	bool probability(const double& base, const double& next, const long long& t) const {
-
-		if (base > next) return true;
-
-		const double pro = static_cast<double>(T - t) / T;
-
-		return pro > random();
-	}
-
-	const double getScore(const vector<int>& index, const vector<Point>& points) const {
+	const double getScore(const array<int, 1000>& index, const vector<Point>& points) const {
 
 		double r = 0;
-		int size = static_cast<int>(points.size());
 
 		for (int i = 0; i < size - 1; i++)
 			r += range(points[index[i]], points[index[i + 1]]);
@@ -243,9 +216,7 @@ private:
 		return r;
 	}
 
-	void change(const int index, const int width, vector<int>& field) {
-
-		const int size = static_cast<int>(field.size());
+	void change(const int index, const int width, array<int, 1000>& field) {
 
 		for (int i = 0; i < width / 2; i++)
 		{
@@ -258,26 +229,25 @@ private:
 
 public:
 
-	Annealing() {
+	Mountain() {
 
 	}
 
 	vector<int> think(const vector<Point>& points) {
 
-		const int size = static_cast<int>(points.size());
+		size = static_cast<int>(points.size());
 
-		vector<int> field(size);
+		array<int, 1000> field;
 		for (int i = 0; i < size; i++)
 		{
 			field[i] = points[i].id;
 		}
-		vector<int> best = field;
+		array<int, 1000> best = field;
 
 		random_device rnd;
 		mt19937 mt(rnd());
 
 		uniform_int_distribution<> randIndex(0, size - 1);
-		bernoulli_distribution randWidth(1.0 / 3.0);
 
 		Timer timer(chrono::milliseconds(this->T));
 
@@ -297,10 +267,10 @@ public:
 
 				int width = 4;
 
-				for (int i = 0; i < 40; i++)
+				for (int i = 0; i < 8; i++)
 				{
-					if (mt() % 16 == 0) break;
-					width++;
+					if (random.rand() % 4 == 0) break;
+					width += random.rand() % 8 + 1;
 				}
 
 				count++;
@@ -330,7 +300,148 @@ public:
 
 		cerr << count << endl;
 
-		return best;
+		vector<int> ans(size);
+		for (int i = 0; i < size; i++)
+		{
+			ans[i] = best[i];
+		}
+
+		return ans;
+	}
+
+};
+
+class Annealing {
+private:
+
+	/// <summary>
+	/// é¿çséûä‘(ms)
+	/// </summary>
+	const int T = 10000;
+
+	const double TempStart = 10000.0;
+	const double TempEnd = 1.0;
+	const double Time = T;
+	const double TempDiff = (TempStart - TempEnd) / Time;
+
+	XorShift random;
+	int size;
+
+	bool probability(const double& base, const double& next, const long long& t) {
+
+		const double diff = base - next;
+
+		if (diff > 0) return true;
+
+		const double temp = TempStart - TempDiff * t;
+
+		const double p = exp(diff / temp) * 4294967295.0;
+
+		return p > random.rand();
+	}
+
+	const double getScore(const array<int, 1000>& index, const vector<Point>& points) const {
+
+		double r = 0;
+
+		for (int i = 0; i < size - 1; i++)
+			r += range(points[index[i]], points[index[i + 1]]);
+		r += range(points[index[0]], points[index[size - 1]]);
+
+		return r;
+	}
+
+	void change(const int index, const int width, array<int, 1000>& field) {
+
+		for (int i = 0; i < width / 2; i++)
+		{
+			int p1 = (index + (i + 1)) % size;
+			int p2 = (index + (width - 1) - (i + 1)) % size;
+
+			swap(field[p1], field[p2]);
+		}
+	}
+
+public:
+
+	Annealing() {
+
+	}
+
+	vector<int> think(const vector<Point>& points) {
+
+		size = static_cast<int>(points.size());
+
+		array<int, 1000> field;
+		for (int i = 0; i < size; i++)
+		{
+			field[i] = points[i].id;
+		}
+		array<int, 1000> best = field;
+
+		random_device rnd;
+		mt19937 mt(rnd());
+
+		uniform_int_distribution<> randIndex(0, size - 1);
+
+		Timer timer(chrono::milliseconds(this->T));
+
+		double bestScore = getScore(best, points);
+		double score = getScore(field, points);
+
+		long long count = 0;
+
+		timer.start();
+		while (!timer)
+		{
+			const auto diff = timer.diff();
+
+			for (int i = 0; i < 100; i++)
+			{
+				const int index = randIndex(mt);
+
+				int width = 4;
+
+				for (int i = 0; i < 8; i++)
+				{
+					if (random.rand() % 4 == 0) break;
+					width += random.rand() % 8 + 1;
+				}
+
+				count++;
+
+				const int p0 = index;
+				const int p1 = (index + 1) % size;
+				const int p2 = (index + width - 2) % size;
+				const int p3 = (index + width - 1) % size;
+
+				const double baseRange = range(points[field[p0]], points[field[p1]]) + range(points[field[p2]], points[field[p3]]);
+				const double deffRange = range(points[field[p0]], points[field[p2]]) + range(points[field[p1]], points[field[p3]]);
+
+				if (probability(baseRange, deffRange, diff))
+				{
+					change(p0, width, field);
+
+					score -= baseRange - deffRange;
+
+					if (bestScore > score)
+					{
+						best = field;
+						bestScore = score;
+					}
+				}
+			}
+		}
+
+		cerr << count << endl;
+
+		vector<int> ans(size);
+		for (int i = 0; i < size; i++)
+		{
+			ans[i] = best[i];
+		}
+
+		return ans;
 	}
 
 };
