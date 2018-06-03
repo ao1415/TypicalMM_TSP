@@ -218,7 +218,7 @@ private:
 
 	void change(const int index, const int width, array<int, 1000>& field) {
 
-		for (int i = 0; i < width / 2; i++)
+		for (int i = 0; i < width / 2 - 1; i++)
 		{
 			int p1 = (index + (i + 1)) % size;
 			int p2 = (index + (width - 1) - (i + 1)) % size;
@@ -317,7 +317,7 @@ private:
 	/// <summary>
 	/// ÀsŠÔ(ms)
 	/// </summary>
-	const int T = 10000;
+	const int T = 100000;
 
 	const double TempStart = 10000.0;
 	const double TempEnd = 1.0;
@@ -353,7 +353,7 @@ private:
 
 	void change(const int index, const int width, array<int, 1000>& field) {
 
-		for (int i = 0; i < width / 2; i++)
+		for (int i = 0; i < width / 2 - 1; i++)
 		{
 			int p1 = (index + (i + 1)) % size;
 			int p2 = (index + (width - 1) - (i + 1)) % size;
@@ -396,7 +396,7 @@ public:
 		{
 			const auto diff = timer.diff();
 
-			for (int i = 0; i < 100; i++)
+			for (int i = 0; i < 5000; i++)
 			{
 				const int index = randIndex(mt);
 
