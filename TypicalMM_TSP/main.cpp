@@ -231,14 +231,14 @@ private:
 		return pro > random();
 	}
 
-	const double score(const vector<Point>& points) const {
+	const double getScore(const vector<int>& index, const vector<Point>& points) const {
 
 		double r = 0;
 		int size = static_cast<int>(points.size());
 
 		for (int i = 0; i < size - 1; i++)
-			r += range(points[i], points[i + 1]);
-		r += range(points[0], points[size - 1]);
+			r += range(points[index[i]], points[index[i + 1]]);
+		r += range(points[index[0]], points[index[size - 1]]);
 
 		return r;
 	}
@@ -249,12 +249,16 @@ public:
 
 	}
 
-	vector<Point> think(const vector<Point>& points) {
-
-		vector<Point> field = points;
-		vector<Point> best = field;
+	vector<int> think(const vector<Point>& points) {
 
 		const int size = static_cast<int>(points.size());
+
+		vector<int> field(size);
+		for (int i = 0; i < size; i++)
+		{
+			field[i] = points[i].id;
+		}
+		vector<int> best = field;
 
 		random_device rnd;
 		mt19937 mt(rnd());
@@ -262,6 +266,11 @@ public:
 		uniform_int_distribution<> randBetween(0, size - 1);
 
 		Timer timer(chrono::milliseconds(this->T));
+
+		double bestScore = getScore(best, points);
+		double score = getScore(field, points);
+
+		long long count = 0;
 
 		timer.start();
 		while (!timer)
@@ -271,24 +280,39 @@ public:
 			for (int i = 0; i < 100; i++)
 			{
 				const int index = randBetween(mt);
+				count++;
 
 				const int p0 = index;
 				const int p1 = (index + 1) % size;
 				const int p2 = (index + 2) % size;
 				const int p3 = (index + 3) % size;
 
-				const double baseRange = range(field[p0], field[p1]) + range(field[p1], field[p2]) + range(field[p2], field[p3]);
-				const double deffRange = range(field[p0], field[p2]) + range(field[p2], field[p1]) + range(field[p1], field[p3]);
+				const double baseRange = range(points[field[p0]], points[field[p1]]) + range(points[field[p2]], points[field[p3]]);
+				const double deffRange = range(points[field[p0]], points[field[p2]]) + range(points[field[p1]], points[field[p3]]);
 
 				if (probability(baseRange, deffRange, diff))
 				{
 					swap(field[p1], field[p2]);
 
-					if (score(best) > score(field))
+					score -= baseRange - deffRange;
+
+					if (bestScore > score && baseRange < deffRange)
+					{
 						best = field;
+						swap(best[p1], best[p2]);
+						bestScore = score += baseRange - deffRange;
+					}
 				}
 			}
 		}
+
+		if (bestScore > score)
+		{
+			best = field;
+			bestScore = score;
+		}
+
+		cerr << count << endl;
 
 		return best;
 	}
@@ -316,7 +340,7 @@ int main() {
 
 	for (const auto& pos : answer)
 	{
-		cout << pos.id << endl;
+		cout << pos << endl;
 	}
 
 	return 0;
